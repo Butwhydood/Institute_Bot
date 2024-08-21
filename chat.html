@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guidance Bot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #1a1a1a; color: #ffffff; }
+        .sidebar { width: 250px; height: 100vh; background-color: #2c2c2c; position: fixed; left: 0; top: 0; padding: 20px; box-sizing: border-box; }
+        .sidebar h2 { margin-top: 0; }
+        .chat-container { margin-left: 250px; height: 100vh; display: flex; flex-direction: column; }
+        .top-bar { display: flex; justify-content: flex-end; align-items: center; padding: 10px 20px; background-color: #2c2c2c; }
+        .settings-icon, .account-icon { font-size: 24px; margin-left: 20px; cursor: pointer; }
+        .chat-messages { flex-grow: 1; overflow-y: auto; padding: 20px; background-color: #333333; }
+        .input-area { display: flex; padding: 20px; background-color: #2c2c2c; }
+        .input-area input { flex-grow: 1; padding: 10px; border: none; border-radius: 5px; background-color: #4a4a4a; color: #ffffff; }
+        .input-area button { padding: 10px 20px; margin-left: 10px; border: none; border-radius: 5px; background-color: #007bff; color: #ffffff; cursor: pointer; }
+        .mic-icon { font-size: 24px; margin-left: 10px; cursor: not-allowed; color: #777777; }
+        .chat-history { margin-bottom: 20px; }
+        .chat-history-item { padding: 10px; margin-bottom: 5px; background-color: #4a4a4a; border-radius: 5px; cursor: pointer; }
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); justify-content: center; align-items: center; }
+        .modal-content { background-color: #2c2c2c; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); text-align: center; }
+        .modal button { padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; background-color: #007bff; color: #ffffff; cursor: pointer; }
+        .greeting-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: #ffffff; opacity: 0; animation: fadeIn 2s forwards; }
+        .info-section { display: flex; justify-content: center; margin: 20px 0; }
+        .info-card { background-color: #2c2c2c; padding: 20px; border-radius: 10px; margin: 0 10px; text-align: center; width: 200px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+        .info-card h3 { margin-bottom: 10px; font-size: 1.5rem; }
+        .info-card p { font-size: 1.2rem; }
+        .logo-placeholder { display: block; margin: 0 auto 20px; width: 50px; height: 50px; background-color: #4a4a4a; border-radius: 50%; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        .circular-logo {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto;
+        }
+        .info-section {
+            position: relative;
+        }
+
+        .logo-container {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+        /* Chat Bubble Styles */
+        .chat-bubble {
+            max-width: 60%;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            position: relative;
+            font-size: 16px;
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+            float: right;
+        }
+
+        .bot-message {
+            background-color: #4a4a4a;
+            color: #ffffff;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background-color: #007bff;
+            border-radius: 50%;
+            animation: blink 1s infinite alternate;
+        }
+
+        @keyframes blink {
+            to {
+                opacity: 0.3;
+            }
+        }
+        .login-container button:hover,
+        .input-area button:hover {
+        background-color: #0056b3;
+        transition: background-color 0.3s ease;
+        }
+
+        .input-area input:focus {
+        outline: none;
+        background-color: #555555;
+        transition: background-color 0.3s ease;
+        }
+        body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+@media only screen and (max-width: 768px) {
+    /* Adjust the sidebar for mobile */
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 15px;
+        background-color: #202020; /* Slightly darker for contrast */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Soft shadow for depth */
+    }
+
+    /* Chat container becomes stacked */
+    .chat-container {
+        margin-left: 0;
+        flex-direction: column;
+        background-color: #1c1c1c;
+        padding: 10px;
+        border-radius: 10px; /* Rounding the corners */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Add shadow for depth */
+    }
+
+    /* Top bar adjustments */
+    .top-bar {
+        justify-content: space-between;
+        padding: 15px;
+        background-color: #2c2c2c;
+        border-radius: 8px;
+    }
+
+    /* Input area aesthetics */
+    .input-area {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+        background-color: #292929;
+        border-radius: 8px;
+    }
+
+    .input-area input {
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #444444;
+        border: none;
+        color: #ffffff;
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+
+    .input-area button {
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #007bff;
+        color: #ffffff;
+        border: none;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .input-area button:hover {
+        background-color: #0056b3; /* Darker blue for hover effect */
+    }
+
+    /* Chat bubbles centered and with softer aesthetics */
+    .chat-bubble {
+        max-width: 85%;
+        margin: 8px auto;
+        padding: 15px;
+        font-size: 16px;
+        border-radius: 15px;
+        position: relative;
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+    }
+
+    .user-message {
+        background-color: #00aaff;
+        color: #ffffff;
+        border-bottom-right-radius: 0;
+    }
+
+    .bot-message {
+        background-color: #333333;
+        color: #ffffff;
+        border-bottom-left-radius: 0;
+    }
+
+    /* Info section more visually pleasing */
+    .info-section {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+    }
+
+    .info-card {
+        width: 90%;
+        background-color: #202020;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Shadow for better depth */
+        text-align: center;
+    }
+
+    .info-card h3 {
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+        color: #00aaff; /* Bright color for titles */
+    }
+
+    .info-card p {
+        font-size: 1.1rem;
+        color: #ffffff;
+    }
+
+    /* Modal looks sleeker */
+    .modal-content {
+        width: 90%;
+        background-color: #252525;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content button {
+        padding: 12px;
+        border-radius: 8px;
+        background-color: #007bff;
+        color: #ffffff;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    /* Misc aesthetic adjustments */
+    .circular-logo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Shadow for depth */
+    }
+
+    .chat-messages {
+        padding: 15px;
+        background-color: #2c2c2c;
+        border-radius: 8px;
+        max-height: 500px; /* Limit chat height */
+        overflow-y: auto;
+    }
+
+    /* Aesthetic typing indicator */
+    .dot {
+        width: 10px;
+        height: 10px;
+        margin: 0 3px;
+        background-color: #00aaff;
+        animation: blink 1s infinite alternate;
+    }
+}
+
+@media only screen and (max-width: 480px) {
+    /* Further adjustments for very small screens */
+    .input-area input,
+    .input-area button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .circular-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .greeting-message {
+        font-size: 1.2rem;
+    }
+
+    .chat-bubble {
+        max-width: 90%;
+        padding: 12px;
+        font-size: 14px;
+    }
+
+    .info-card {
+        width: 100%;
+    }
+}
+
+
+</style>
+    <script>
+        function showModal() {
+            document.getElementById('myModal').style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('myModal').style.display = 'none';
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        function hideGreeting() {
+            document.getElementById('greeting').style.display = 'none';
+        }
+
+        function appendChatBubble(message, isUser) {
+            const chatMessages = document.getElementById('chat-messages');
+            const chatBubble = document.createElement('div');
+            chatBubble.className = `chat-bubble ${isUser ? 'user-message' : 'bot-message'}`;
+            chatBubble.textContent = message;
+            chatMessages.appendChild(chatBubble);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const chatMessages = document.getElementById('chat-messages');
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.id = 'typing-indicator';
+            typingIndicator.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            chatMessages.appendChild(typingIndicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        function respondToUserInput(input) {
+            appendChatBubble("User: " + input, true);
+            showTypingIndicator();
+
+            setTimeout(() => {
+                hideTypingIndicator();
+                let response = "";
+
+                if (input.toLowerCase().includes("time")) {
+                    response = "The current time is " + new Date().toLocaleTimeString();
+                } else if (input.toLowerCase().includes("date")) {
+                    response = "Today's date is " + new Date().toLocaleDateString();
+                } else if (input.toLowerCase().includes("weather")) {
+                    response = "Please check your preferred weather service for current conditions.";
+                } else if (input.toLowerCase().includes("sibol") || input.toLowerCase().includes("usant sibol")) {
+                    response = "Sibol will take place on the 8th of August for the Senior High School Department of USANT";
+                } else {
+                    response = "Sorry, I can't answer that question.";
+                }
+
+                appendChatBubble("AI: " + response, false);
+            }, 1000); // Simulate 1-second delay for response
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const inputField = document.querySelector('.input-area input');
+            const button = document.querySelector('.input-area button');
+            const username = localStorage.getItem('username') || 'User';
+            const hours = new Date().getHours();
+            const timeOfDay = hours < 12 ? 'morning' : hours < 18 ? 'afternoon' : 'evening';
+            document.getElementById('greeting').textContent = `Good ${timeOfDay}, ${username}`;
+
+            inputField.addEventListener('input', hideGreeting);
+            button.addEventListener('click', () => {
+                const userInput = inputField.value;
+                if (userInput.trim()) {
+                    respondToUserInput(userInput);
+                    inputField.value = "";
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Guidance Bot</h2>
+        <div class="chat-history">
+            <div class="chat-history-item">Previous Chat 1</div>
+            <div class="chat-history-item">Previous Chat 2</div>
+            <div class="chat-history-item">Previous Chat 3</div>
+        </div>
+    </div>
+    <div class="chat-container">
+        <div class="top-bar">
+            <span class="settings-icon" onclick="showModal()">⚙️</span>
+            <span class="account-icon">👤</span>
+        </div>
+        <div class="info-section">
+            <div class="logo-containers">
+                <img src="Untitled.png" alt="Logo" class="circular-logo">
+            </div>
+            <div class="info-card">
+                <h3>Time</h3>
+                <p id="current-time">Loading...</p>
+            </div>
+            <div class="info-card">
+                <h3>Weather</h3>
+                <p id="current-weather">Loading...</p>
+            </div>
+            <div class="info-card">
+                <h3>Date</h3>
+                <p id="current-date">Loading...</p>
+            </div>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <span id="greeting" class="greeting-message"></span>
+        </div>
+        <div class="input-area">
+            <input type="text" placeholder="Type your message...">
+            <span class="mic-icon">🎤</span>
+            <button>Send</button>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <p>Would you like to go back to the menu?</p>
+            <button onclick="redirectToLogin()">Yes</button>
+            <button onclick="hideModal()">No</button>
+        </div>
+    </div>
+
+    <script>
+        // Update the time, date, and weather cards
+        function updateInfoCards() {
+            const timeElement = document.getElementById('current-time');
+            const dateElement = document.getElementById('current-date');
+            const weatherElement = document.getElementById('current-weather');
+
+            timeElement.textContent = new Date().toLocaleTimeString();
+            dateElement.textContent = new Date().toLocaleDateString();
+            weatherElement.textContent = "Sunny, 25°C"; // Placeholder text
+        }
+
+        // Update the info cards immediately and then every minute
+        updateInfoCards();
+            setInterval(updateInfoCards, 60000);
+            function updateTime() {
+            const timeElement = document.getElementById('current-time');
+            timeElement.textContent = new Date().toLocaleTimeString();
+        }
+
+        // Update time immediately and every second
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
+
+
